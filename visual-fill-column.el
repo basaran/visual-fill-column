@@ -104,6 +104,8 @@ the text scale factor, so that the text is wrapped at
   :type '(choice (const :tag "Adjust margins for text scaling" t)
                  (const :tag "Do not adjust margins for text scaling" nil)))
 
+(defvar visual-fill-column-padding 0 "If set, pads left and right margins")
+
 (defvar visual-fill-column--use-split-window-parameter nil "If set, the window parameter `split-window' is used.")
 
 (defvar visual-fill-column--use-min-margins nil "If set, the window parameter `min-margins' is used.")
@@ -317,29 +319,50 @@ cell of the new margins, which will never be less than zero."
 (defun visual-fill-column--set-margins (window)
   "Set window margins for WINDOW."
   ;; Calculate left & right margins.
-  (let* ((total-width (visual-fill-column--window-max-text-width window))
-         (width (or visual-fill-column-width
-                    fill-column))
-         (margins (if (< (- total-width width) 0) ; margins must be >= 0
-                      0
-                    (- total-width width)))
-         (left (if visual-fill-column-center-text
-                   (/ margins 2)
-                 0))
-         (right (- margins left)))
-
-    (if visual-fill-column-extra-text-width
-        (let ((add-width (visual-fill-column--add-extra-width left right visual-fill-column-extra-text-width)))
-          (setq left (car add-width)
-                right (cdr add-width))))
-
-    ;; put an explicitly R2L buffer on the right side of the window
-    (when (and (eq bidi-paragraph-direction 'right-to-left)
-               (= left 0))
-      (setq left right)
-      (setq right 0))
-
-    (set-window-margins window left right)))
+    (let*
+        ((total-width
+          (visual-fill-column--window-max-text-width window))
+         (width
+          (if
+              (<=
+               (- total-width
+                  (* visual-fill-column-padding 2))
+               visual-fill-column-width)
+              (- total-width
+                 (* visual-fill-column-padding 2))
+            (or visual-fill-column-width fill-column)))
+         (margins
+          (if
+              (<=
+               (- total-width width)
+               0)
+              0
+            (- total-width width)))
+         (left
+          (if visual-fill-column-center-text
+              (/ margins 2)
+            (if
+                (> margins 0)
+                visual-fill-column-padding
+              visual-fill-column-padding)))
+         (right
+          (- margins left)))
+      (if visual-fill-column-extra-text-width
+          (let
+              ((add-width
+                (visual-fill-column--add-extra-width left right visual-fill-column-extra-text-width)))
+            (setq left
+                  (car add-width)
+                  right
+                  (cdr add-width))))
+      (if
+          (and
+           (eq bidi-paragraph-direction 'right-to-left)
+           (= left 0))
+          (progn
+            (setq left right)
+            (setq right 0)))
+      (set-window-margins window left right)))
 
 (provide 'visual-fill-column)
 
