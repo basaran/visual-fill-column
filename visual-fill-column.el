@@ -347,21 +347,18 @@ cell of the new margins, which will never be less than zero."
               visual-fill-column-padding)))
          (right
           (- margins left)))
+
       (if visual-fill-column-extra-text-width
-          (let
-              ((add-width
-                (visual-fill-column--add-extra-width left right visual-fill-column-extra-text-width)))
-            (setq left
-                  (car add-width)
-                  right
-                  (cdr add-width))))
-      (if
-          (and
-           (eq bidi-paragraph-direction 'right-to-left)
-           (= left 0))
-          (progn
-            (setq left right)
-            (setq right 0)))
+          (let ((add-width (visual-fill-column--add-extra-width left right visual-fill-column-extra-text-width)))
+            (setq left (car add-width)
+                  right (cdr add-width))))
+
+      ;; put an explicitly R2L buffer on the right side of the window
+      (when (and (eq bidi-paragraph-direction 'right-to-left)
+                 (= left 0))
+        (setq left right)
+        (setq right 0))
+
       (set-window-margins window left right)))
 
 (provide 'visual-fill-column)
